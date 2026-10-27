@@ -22,6 +22,22 @@
       "description": "Configure model training in the Training Workbench."
     },
     {
+      "id": "tuning-plan",
+      "suffix": ".tuning-plan.pft",
+      "viewType": "fredis.trainingConfigEditor",
+      "editorName": "FREDIS Training Configuration",
+      "label": "Tuning Plan",
+      "description": "Edit and run a parameter search in the Training Workbench."
+    },
+    {
+      "id": "tuning-config",
+      "suffix": ".tuning-config.pft",
+      "viewType": "fredis.trainingConfigEditor",
+      "editorName": "FREDIS Training Configuration",
+      "label": "Tuning Settings",
+      "description": "Edit tuning candidates and training settings in the Training Workbench."
+    },
+    {
       "id": "reaction-analysis-config",
       "suffix": ".reaction-pattern-analysis.pft",
       "viewType": "fredis.reactionPatternAnalysisConfigEditor",

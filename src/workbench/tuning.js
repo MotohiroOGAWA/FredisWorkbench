@@ -72,7 +72,7 @@ function client(){
    if(input.disabled||inheritedShared)delete state.parameters[key];check.checked=key in state.parameters;values.hidden=!check.checked;if(document.activeElement!==values)values.value=(state.parameters[key]||[Number(input.value)]).join(', ');
   }
   const entries=Object.entries(state.parameters),count=entries.reduce((n,[,v])=>n*new Set(v).size,1);
-  status.textContent=entries.length?entries.length+' parameters · '+entries.length+' search dimensions · '+count+' trials · each trial uses the configured epochs.':config.architectureMode==='shared'?'Enable Tune beside a shared architecture or training parameter.':'Enable Tune beside a component or reaction parameter.';
+  status.textContent=entries.length?entries.length+' parameters · '+entries.length+' search dimensions · '+count+' trials · each trial uses the configured epochs. Reuse the same plan and output directory to continue unfinished trials.':config.architectureMode==='shared'?'Enable Tune beside a shared architecture or training parameter.':'Enable Tune beside a component or reaction parameter.';
   if(form.querySelector('[name=trainingMode]:checked')?.value==='resume')status.textContent='Select New model to tune architecture and training parameters.';
  }
  toggle.onclick=()=>{state.enabled=!state.enabled;refresh();};

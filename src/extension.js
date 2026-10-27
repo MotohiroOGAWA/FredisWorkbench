@@ -209,8 +209,8 @@ function resolveWorkbenchPanel(context, output, panel, initialPage = "home", ini
           panel.webview.postMessage({ type: 'config', path: message.type==='loadConfigJSON'?undefined:picked[0].fsPath, config: normalizeConfig({ ...defaultConfig(context), ...config }) });
         }
       } else if (message.type === 'saveTrainingConfig') {
-        const target = await vscode.window.showSaveDialog({ filters: { 'FREDIS training configuration': ['pft'] }, defaultUri: vscode.Uri.file(trainingConfigPath||TRAINING_CONFIG_NAME) });
-        if (target) {const file=ensureFileSuffix(target.fsPath,TRAINING_CONFIG_SUFFIX),config=normalizeTrainingConfig(message.config,path.dirname(trainingConfigPath||file)),checkpoint=config.resume?path.relative(config.outputDir||path.dirname(file),config.resume).split(path.sep).join('/'):'';await fs.promises.writeFile(file, JSON.stringify({...relativePaths(config,path.dirname(file)),resume:checkpoint?(checkpoint==='..'||checkpoint.startsWith('../')?checkpoint:'./'+checkpoint):''}, null, 2) + '\n');trainingConfigPath=file;projects.record(context,'training',config,{label:path.basename(file),reason:'exported',sourcePath:file,base:projectRoot(context)});}
+        const target = await vscode.window.showSaveDialog({ filters: { 'FREDIS training configuration': ['pft'] }, defaultUri: vscode.Uri.file(trainingConfigPath||(message.config.tuning?.enabled?'fragment-tree.tuning-plan.pft':TRAINING_CONFIG_NAME)) });
+        if (target) {const file=ensureFileSuffix(target.fsPath,message.config.tuning?.enabled?fileFormats.format('tuning-plan').suffix:TRAINING_CONFIG_SUFFIX),config=normalizeTrainingConfig(message.config,path.dirname(trainingConfigPath||file)),checkpoint=config.resume?path.relative(config.outputDir||path.dirname(file),config.resume).split(path.sep).join('/'):'';await fs.promises.writeFile(file, JSON.stringify(file.endsWith('.tuning-plan.pft')?serializeConfiguration(config,'training',file):{...relativePaths(config,path.dirname(file)),resume:checkpoint?(checkpoint==='..'||checkpoint.startsWith('../')?checkpoint:'./'+checkpoint):''}, null, 2) + '\n');trainingConfigPath=file;projects.record(context,'training',config,{label:path.basename(file),reason:'exported',sourcePath:file,base:projectRoot(context)});}
       } else if (['loadTrainingConfig','loadTrainingConfigFile','loadTrainingConfigJSON'].includes(message.type)) {
         if(message.type==='loadTrainingConfigJSON'&&(typeof message.json!=='string'||message.json.length>2000000))throw new Error('Training configuration is too large or invalid.');
         if(message.type==='loadTrainingConfigFile'&&(typeof message.path!=='string'||!message.path.trim()))throw new Error('Select a training configuration file.');
@@ -221,7 +221,7 @@ function resolveWorkbenchPanel(context, output, panel, initialPage = "home", ini
           if(textDocument&&message.type!=='loadTrainingConfigJSON'){await vscode.commands.executeCommand('vscode.openWith',picked[0],fileFormats.format('training-config').viewType);return;}
           const raw=JSON.parse(message.type==='loadTrainingConfigJSON'?message.json:await fs.promises.readFile(picked[0].fsPath, 'utf8'));
           const config=normalizeTrainingConfig(raw,message.type==='loadTrainingConfigJSON'?undefined:path.dirname(picked[0].fsPath));
-          config.resume=raw.resume||'';
+          config.resume=raw.configuration||raw.trials?'':raw.resume||'';
           const restored={...defaultTrainingConfig(context),...config};
           restored.modelConfig=parameterService.merge(defaultTrainingConfig(context).modelConfig,config.modelConfig||{});
           trainingConfigPath=message.type==='loadTrainingConfigJSON'?undefined:picked[0].fsPath;
@@ -397,6 +397,7 @@ function normalizeConfig(config, baseDirectory) {
 }
 
 function serializeConfiguration(config,kind,file,sourceFile=file) {
+  if(kind==='training'&&file.endsWith('.tuning-plan.pft')){const resolved=normalizeTrainingConfig(config,path.dirname(sourceFile));const args=buildTrainingArgs(resolved);if(args[3]!=='tune-fragment-tree')throw new Error('A tuning plan requires Tuning mode.');return {...JSON.parse(args[args.indexOf('--plan-json')+1]),schema:'fredis.tuning-plan',schemaVersion:1};}
   if(kind==='data')return relativePaths(normalizeConfig(config,path.dirname(sourceFile)),path.dirname(file));
   const resolved=normalizeTrainingConfig(config,path.dirname(sourceFile));
   const checkpoint=resolved.resume?path.relative(resolved.outputDir||path.dirname(file),resolved.resume).split(path.sep).join('/'):'';
@@ -404,6 +405,8 @@ function serializeConfiguration(config,kind,file,sourceFile=file) {
 }
 
 function normalizeTrainingConfig(config, baseDirectory) {
+  if(config?.configuration||Array.isArray(config?.trials))config=require('./workbench/tuning-document').configuration(config);
+
   const result=JSON.parse(JSON.stringify(config||{}));
   result.architectureMode=require('./workbench/shared-architecture').trainingArchitectureMode(result);
   const model=result.modelConfig;
@@ -496,7 +499,7 @@ function buildArgs(c) {
 }
 
 function buildTrainingArgs(c) {
-  if(c.tuning?.enabled){const trials=require('./workbench/tuning').plan(c,buildTrainingArgs);return ['-m','fredis.cli','train','tune-fragment-tree','--plan-json',JSON.stringify({outputDir:c.outputDir,trials})];}
+  if(c.tuning?.enabled){const trials=require('./workbench/tuning').plan(c,buildTrainingArgs);return ['-m','fredis.cli','train','tune-fragment-tree','--plan-json',JSON.stringify({outputDir:c.outputDir,configuration:c,trials})];}
   c=require('./workbench/reaction-parameters').resolvePatternArchitecture(JSON.parse(JSON.stringify(c)));
   const shared=require('./workbench/shared-architecture');
   const sharedMode=shared.trainingArchitectureMode(c)==='shared';
@@ -582,7 +585,7 @@ class TrainingConfigEditorProvider {
   constructor(context, output) { this.context=context;this.output=output; }
   async resolveCustomTextEditor(document,panel) {
     const file=document.uri.fsPath;
-    const decode=raw=>{const config=normalizeTrainingConfig(raw,path.dirname(file));config.resume=raw.resume||'';return config;};
+    const decode=raw=>{const config=normalizeTrainingConfig(raw,path.dirname(file));config.resume=raw.configuration||raw.trials?'':raw.resume||'';return config;};
     try {
       const config=decode(JSON.parse(document.getText()));
       resolveWorkbenchPanel(this.context,this.output,panel,'training',null,null,{config,path:file},document);
@@ -598,7 +601,7 @@ class TrainingConfigEditorProvider {
       const file=document.uri.fsPath,raw=JSON.parse(await fs.promises.readFile(file,'utf8'));
       if(!raw||typeof raw!=='object'||Array.isArray(raw))throw new Error('Invalid training configuration.');
       const config=normalizeTrainingConfig(raw,path.dirname(file));
-      config.resume=raw.resume||'';
+      config.resume=raw.configuration||raw.trials?'':raw.resume||'';
       if(!config.modelConfig||typeof config.modelConfig!=='object')throw new Error('Training configuration is missing model settings.');
       panel.title='FREDIS Workbench · Training';
       return resolveWorkbenchPanel(this.context,this.output,panel,'training',null,null,{config,path:file});
@@ -612,7 +615,7 @@ class ResultEditorProvider {
   async resolveCustomEditor(document, panel) {
     const entry = fileFormats.match(document.uri.fsPath);
     if (!entry) return fileFormatPicker.attach(panel, document.uri, () => this.resolveResultEditor(document, panel));
-    if (entry.id === 'training-config') return new TrainingConfigEditorProvider(this.context,this.output).resolveCustomEditor(document,panel);
+    if (['training-config','tuning-config','tuning-plan'].includes(entry.id)) return new TrainingConfigEditorProvider(this.context,this.output).resolveCustomEditor(document,panel);
     if (entry.id === 'training-data-config') return new TrainingDataConfigEditorProvider(this.context,this.output).resolveCustomEditor(document,panel);
     if (entry.id === 'reaction-analysis-result') return new ReactionPatternAnalysisConfigEditorProvider(this.context,this.output).resolveCustomEditor(document,panel);
     if (entry.viewType !== fileFormats.fallback.viewType) return vscode.commands.executeCommand('vscode.openWith',document.uri,entry.viewType);

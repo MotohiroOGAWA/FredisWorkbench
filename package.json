@@ -103,6 +103,12 @@
         "selector": [
           {
             "filenamePattern": "*.training-config.pft"
+          },
+          {
+            "filenamePattern": "*.tuning-plan.pft"
+          },
+          {
+            "filenamePattern": "*.tuning-config.pft"
           }
         ],
         "priority": "default"
@@ -291,6 +297,8 @@
           ".pft",
           ".training-data-config.pft",
           ".training-config.pft",
+          ".tuning-plan.pft",
+          ".tuning-config.pft",
           ".reaction-pattern-analysis.pft",
           ".reactionpatternanalysis.pft",
           ".fredis-result",
@@ -350,7 +358,7 @@
     "check:reaction-pattern-analysis": "node --check src/features/reaction-pattern-analysis/editor.js && node --check src/features/reaction-pattern-analysis/results-view.js && node scripts/check-reaction-pattern-analysis.js",
     "check:projects": "node scripts/check-projects.js",
     "check:workbench": "node scripts/check-projects.js && node scripts/check-workbench.js && node scripts/check-training-data-config.js && node scripts/check-dataset-splits.js && node scripts/check-dataset-list-ui.js && node scripts/check-split-export.js && node scripts/check-workbench-jobs.js && node scripts/check-parameter-editor.js && node scripts/check-defaults.js",
-    "check:tuning": "node scripts/check-tuning.js && node scripts/check-tuning-result.js",
+    "check:tuning": "node scripts/check-tuning.js && node scripts/check-tuning-result.js && node scripts/check-tuning-config.js",
     "check:competitive": "node scripts/check-competitive-mlps.js && python scripts/check-fragment-training-cli.py",
     "sync:file-formats": "node scripts/sync-file-formats.js",
     "predev": "npm run sync:file-formats",
