@@ -1,0 +1,17 @@
+node_modules/
+*.vsix
+artifacts/
+
+vendor/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.egg-info/
+*.local.*
+
+.verification/
+
+build/
+*.so
+*.dylib
+*.egg-info/

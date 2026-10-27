@@ -1,0 +1,11 @@
+{
+  "name": "msentity-spectrum-viewer-host",
+  "version": "1.0.1",
+  "private": true,
+  "description": "Node.js host library of msentity-spectrum-viewer (backend process, optional RDKit chemistry).",
+  "main": "index.js",
+  "license": "MIT",
+  "optionalDependencies": {
+    "@rdkit/rdkit": "2026.9.1"
+  }
+}

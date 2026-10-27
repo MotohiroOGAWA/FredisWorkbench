@@ -1,0 +1,11 @@
+build/
+build-*/
+dist/
+node_modules/
+*.vsix
+__pycache__/
+*.pyc
+.vcpkg-cache/
+
+# Release procedure (kept local)
+RELEASING.md

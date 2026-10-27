@@ -1,0 +1,130 @@
+# Release build of the VS Code extension: a self-contained backend for Linux
+# x64 and Windows x64 (Arrow, Parquet, HDF5 and the C++ runtime linked
+# statically via vcpkg), packaged with and without RDKit. The packages are
+# uploaded as the artifacts vsix-linux-x64 and vsix-win32-x64; nothing is
+# published here.
+#
+# Started by `npm run release:build` (scripts/release.js), which downloads the
+# packages; `npm run release:publish` then publishes those same files.
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version being built (must equal vscode/package.json)"
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  build:
+    name: build (${{ matrix.target }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04          # glibc 2.35
+            target: linux-x64
+            triplet: x64-linux
+            backend: build/backend/msentity-viewer-backend
+          - os: windows-2022
+            target: win32-x64
+            triplet: x64-windows-static
+            backend: build/backend/Release/msentity-viewer-backend.exe
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+
+      - name: Check that the requested version is the extension version
+        run: |
+          version=$(node -p "require('./vscode/package.json').version")
+          test "$version" = "${{ inputs.version }}" || { echo "vscode/package.json has $version, not ${{ inputs.version }}"; exit 1; }
+
+      - name: Set up vcpkg (pinned to the manifest baseline)
+        run: |
+          if [ "$RUNNER_OS" = Windows ]; then
+            root="$(cygpath -m "$RUNNER_TEMP")/vcpkg"; cache="$(cygpath -m "$GITHUB_WORKSPACE")/.vcpkg-cache"
+          else
+            root="$RUNNER_TEMP/vcpkg"; cache="$GITHUB_WORKSPACE/.vcpkg-cache"
+          fi
+          baseline=$(node -p "require('./vcpkg.json')['builtin-baseline']")
+          git clone https://github.com/microsoft/vcpkg.git "$root"
+          git -C "$root" checkout "$baseline"
+          if [ "$RUNNER_OS" = Windows ]; then "$root/bootstrap-vcpkg.bat" -disableMetrics; else "$root/bootstrap-vcpkg.sh" -disableMetrics; fi
+          mkdir -p "$cache"
+          echo "VCPKG_ROOT=$root" >> "$GITHUB_ENV"
+          echo "VCPKG_DEFAULT_BINARY_CACHE=$cache" >> "$GITHUB_ENV"
+
+      - name: Restore built dependencies
+        id: vcpkg-cache
+        uses: actions/cache/restore@v6
+        with:
+          path: .vcpkg-cache
+          key: vcpkg-${{ matrix.triplet }}-${{ hashFiles('vcpkg.json') }}
+          restore-keys: vcpkg-${{ matrix.triplet }}-
+
+      - name: Build tools for vcpkg ports (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y autoconf automake autoconf-archive libtool pkg-config bison flex
+
+      - name: Configure (builds Arrow, Parquet, HDF5 with vcpkg on the first run)
+        run: >
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+          -DVCPKG_TARGET_TRIPLET=${{ matrix.triplet }}
+          -DMSENTITY_STATIC_DEPS=ON
+
+      # Saved even if a later step fails, so dependencies are built only once.
+      - name: Save built dependencies
+        if: always() && steps.vcpkg-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: .vcpkg-cache
+          key: vcpkg-${{ matrix.triplet }}-${{ hashFiles('vcpkg.json') }}
+
+      - name: Build the backend
+        run: cmake --build build --config Release --parallel --target msentity-viewer-backend
+
+      - name: Show the backend's library dependencies
+        run: |
+          case "$RUNNER_OS" in
+            Linux) ldd "${{ matrix.backend }}" ;;
+            Windows) ls -la "${{ matrix.backend }}" ;;
+          esac
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+
+      - name: Install RDKit (host) and vsce (vscode)
+        run: |
+          (cd host && npm ci --ignore-scripts)
+          (cd vscode && npm ci)
+
+      - name: Smoke test of the backend
+        run: node scripts/smoke-backend.js "${{ matrix.backend }}"
+
+      - name: Full test suite (Linux)
+        if: runner.os == 'Linux'
+        env:
+          MSENTITY_VIEWER_BACKEND: ${{ github.workspace }}/${{ matrix.backend }}
+        run: node scripts/run-tests.js
+
+      - name: Package (with and without RDKit)
+        run: |
+          node vscode/scripts/package-vsix.js --target ${{ matrix.target }} --backend "${{ matrix.backend }}" --out dist
+          node vscode/scripts/package-vsix.js --target ${{ matrix.target }} --backend "${{ matrix.backend }}" --out dist --no-rdkit
+          ls -la dist/*.vsix
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: vsix-${{ matrix.target }}
+          path: dist/*.vsix

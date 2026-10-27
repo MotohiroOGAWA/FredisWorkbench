@@ -1,0 +1,168 @@
+{
+  "name": "msentity-spectrum-viewer",
+  "displayName": "msentity Spectrum Viewer",
+  "description": "View msentity datasets (MSDS, MSP, MGF, TSV, CSV) and similarity results (.mssim) in VS Code, powered by the msentity C++ library.",
+  "version": "1.0.1",
+  "publisher": "motohiroogawa",
+  "icon": "media/editor-icon.png",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "mass spectrometry",
+    "msentity",
+    "msds",
+    "msp",
+    "mgf",
+    "spectrum"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/MotohiroOGAWA/msentity-spectrum-viewer.git"
+  },
+  "extensionKind": [
+    "workspace"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "languages": [
+      {
+        "id": "msentity-dataset",
+        "aliases": [
+          "msentity Dataset"
+        ],
+        "extensions": [
+          ".msds",
+          ".msp",
+          ".mgf"
+        ],
+        "icon": {
+          "light": "./media/editor-icon.png",
+          "dark": "./media/editor-icon.png"
+        }
+      },
+      {
+        "id": "msentity-similarity",
+        "aliases": [
+          "msentity Similarity"
+        ],
+        "extensions": [
+          ".mssim"
+        ]
+      }
+    ],
+    "customEditors": [
+      {
+        "viewType": "msentity.spectrumViewer",
+        "displayName": "msentity Spectrum Viewer",
+        "selector": [
+          {
+            "filenamePattern": "*.msds"
+          },
+          {
+            "filenamePattern": "*.msp"
+          },
+          {
+            "filenamePattern": "*.mgf"
+          }
+        ],
+        "priority": "default"
+      },
+      {
+        "viewType": "msentity.similarityViewer",
+        "displayName": "msentity Similarity Viewer",
+        "selector": [
+          {
+            "filenamePattern": "*.mssim"
+          }
+        ],
+        "priority": "default"
+      }
+    ],
+    "commands": [
+      {
+        "command": "msentitySpectrumViewer.open",
+        "title": "MS Entity: Open Spectrum Viewer"
+      },
+      {
+        "command": "msentitySpectrumViewer.showLogs",
+        "title": "MS Entity: Show Spectrum Viewer Logs"
+      },
+      {
+        "command": "msentitySpectrumViewer.openAs",
+        "title": "MS Entity: Open as..."
+      }
+    ],
+    "menus": {
+      "explorer/context": [
+        {
+          "command": "msentitySpectrumViewer.openAs",
+          "when": "!explorerResourceIsFolder",
+          "group": "msentity@21"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "msentity Spectrum Viewer",
+      "properties": {
+        "msentitySpectrumViewer.backendPath": {
+          "type": "string",
+          "default": "",
+          "description": "Path of a msentity-viewer-backend executable to use instead of the one included in the extension (for development builds)."
+        },
+        "msentitySpectrumViewer.pageSize": {
+          "type": "number",
+          "default": 20,
+          "minimum": 1,
+          "maximum": 500,
+          "description": "Number of spectra loaded per page."
+        },
+        "msentitySpectrumViewer.spectrumFloatingWindow": {
+          "type": "boolean",
+          "default": true,
+          "description": "Open the reusable Mass Spectrum editor in a separate VS Code floating window. If disabled, it opens beside the dataset table."
+        },
+        "msentitySpectrumViewer.structureSmilesColumn": {
+          "type": "string",
+          "default": "SMILES",
+          "description": "Preferred metadata column containing SMILES for Structure previews. Matching is case-insensitive; known SMILES column names are used as fallbacks when this column is absent."
+        },
+        "msentitySpectrumViewer.showStructureColumn": {
+          "type": "boolean",
+          "default": true,
+          "description": "Show the Structure column when a SMILES column exists. Structures are drawn by RDKit, which is included in the extension."
+        },
+        "msentitySpectrumViewer.structurePreviewWidth": {
+          "type": "number",
+          "default": 560,
+          "minimum": 200,
+          "maximum": 1200,
+          "description": "Width in pixels used to render Structure preview SVGs."
+        },
+        "msentitySpectrumViewer.structurePreviewHeight": {
+          "type": "number",
+          "default": 400,
+          "minimum": 200,
+          "maximum": 1200,
+          "description": "Height in pixels used to render Structure preview SVGs."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "package": "node scripts/package-vsix.js",
+    "test": "node ../scripts/run-tests.js"
+  },
+  "devDependencies": {
+    "@vscode/vsce": "^3.6.0"
+  },
+  "activationEvents": [
+    "onCustomEditor:msentity.spectrumViewer",
+    "onCustomEditor:msentity.similarityViewer"
+  ]
+}
