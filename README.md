@@ -57,10 +57,18 @@ npm run dev
 ```
 
 In VS Code, launch **Run FREDIS Workbench** from this repository's Run and Debug
-panel, then run **FREDIS: Open Workbench** in the Extension Development Host.
+panel. The Workbench opens automatically in the Extension Development Host.
 Use **FREDIS: Select Backend Folder** there to change the backend checkout.
 In the enclosing FREDIS development workspace, **Run FREDIS Workbench Extension
 (no debugger)** loads `mnt/fredis_workbench` and opens `mnt/fredis` directly.
+
+To select a Workbench project automatically, set `env.FREDIS_WORKBENCH_PROJECT`
+in `launch.json` to its absolute directory path. This is the experiment/project
+folder, separate from `fredis.applicationRoot` (the Python backend source).
+The directory must already exist; missing project metadata is initialized in
+`.fredis/`. The configured path takes precedence over the previously opened
+project on each launch. Remove the variable to restore the usual previous-project
+behavior. You can still switch projects from Home during a session.
 
 `upstream/msentity-spectrum-viewer` is a source snapshot of the separate viewer.
 `upstream/versions.json` records all source commits. No Git submodules are required. Packaging

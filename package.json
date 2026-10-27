@@ -12,6 +12,7 @@
     "Machine Learning"
   ],
   "activationEvents": [
+    "onStartupFinished",
     "onCommand:fredis.openWorkbench",
     "onCommand:fredis.selectApplicationRoot",
     "onCommand:fredis.editReactionPatterns",

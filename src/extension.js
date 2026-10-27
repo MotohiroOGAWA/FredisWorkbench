@@ -48,6 +48,14 @@ const REACTION_PATTERN_ANALYSIS_CONFIG_VIEW_TYPE = fileFormats.format('reaction-
 const REACTION_PATTERN_ANALYSIS_RESULT_VIEW_TYPE = fileFormats.format('reaction-analysis-result').viewType;
 let runningProcess, predictionProcess;
 
+function autoOpenDevelopmentPanel(context) {
+  if (process.env.FREDIS_WORKBENCH_AUTO_OPEN !== '1' ||
+      context.extensionMode !== vscode.ExtensionMode.Development) return;
+  return Promise.resolve()
+    .then(() => vscode.commands.executeCommand('fredis.openWorkbench'))
+    .catch(error => vscode.window.showErrorMessage(`Failed to open FREDIS: ${error.message}`));
+}
+
 function activate(context) {
   const output = vscode.window.createOutputChannel('FREDIS');
   const provider = new ResultEditorProvider(context, output);
@@ -84,6 +92,7 @@ function activate(context) {
   fragmenterEditor.register(context);
   workbench.register(context, output, projectRoot, openWorkbench);
   enableDevelopmentReload(context, output);
+  autoOpenDevelopmentPanel(context);
 }
 
 function enableDevelopmentReload(context, output) {

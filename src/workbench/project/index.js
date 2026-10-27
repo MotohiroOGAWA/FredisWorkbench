@@ -4,6 +4,12 @@ const store=require('./store');
 const ui=require('./ui');
 function createContext(context){
   const scoped=Object.create(context);scoped.fredisProject={root:null,error:null};
+  const configured=(process.env.FREDIS_WORKBENCH_PROJECT||'').trim();
+  if(configured){
+    try{const directory=store.open(path.resolve(configured));store.readDrafts(directory);scoped.fredisProject.root=directory;}
+    catch(error){scoped.fredisProject.error='Could not open configured project '+configured+': '+error.message;}
+    return scoped;
+  }
   const previous=context.workspaceState?.get('fredis.project');
   if(previous)try{store.read(previous);store.readDrafts(previous);scoped.fredisProject.root=previous;}catch(error){scoped.fredisProject.error='Could not reopen project '+previous+': '+error.message;}
   return scoped;

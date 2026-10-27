@@ -5,6 +5,7 @@
       "name": "Run FREDIS Workbench",
       "type": "extensionHost",
       "request": "launch",
+      "env": { "FREDIS_WORKBENCH_AUTO_OPEN": "1" },
       "args": [
         "--extensionDevelopmentPath=${workspaceFolder}",
         "${workspaceFolder}"
