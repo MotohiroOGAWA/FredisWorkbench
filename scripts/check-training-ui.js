@@ -3,7 +3,7 @@ const Module=require('module'),load=Module._load;Module._load=function(name,pare
 const ext=require('../src/extension');
 const preset=require('./fixtures').model;
 const messages=[],errors=[];const vc=new VirtualConsole();vc.on('jsdomError',e=>errors.push(e.detail?.stack||e.message));
-const dom=new JSDOM(ext.workbenchHtml(require('./fixtures').dataConfig,{modelConfig:preset,epochs:1,batchSize:4,lr:0.0001,headOnly:false,experimentName:'exp_main'}),{runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:vc,beforeParse(w){w.acquireVsCodeApi=()=>({postMessage:m=>messages.push(m),getState:()=>({}),setState:()=>{}});w.HTMLElement.prototype.scrollIntoView=function(){};w.ResizeObserver=class{observe(){} disconnect(){}};w.matchMedia=()=>({matches:false,addEventListener(){}});w.CSS={escape:s=>s};}});
+const dom=new JSDOM(ext.workbenchHtml(require('./fixtures').dataConfig,{modelConfig:preset,epochs:1,batchSize:4,lr:0.0001,headOnly:false}),{runScripts:'dangerously',pretendToBeVisual:true,virtualConsole:vc,beforeParse(w){w.acquireVsCodeApi=()=>({postMessage:m=>messages.push(m),getState:()=>({}),setState:()=>{}});w.HTMLElement.prototype.scrollIntoView=function(){};w.ResizeObserver=class{observe(){} disconnect(){}};w.matchMedia=()=>({matches:false,addEventListener(){}});w.CSS={escape:s=>s};}});
 const assert=require('assert/strict');
 const {document:d}=dom.window,w=dom.window,form=d.querySelector('#trainingForm');
 assert.equal(Number(form.elements.dropout.value),0.5);

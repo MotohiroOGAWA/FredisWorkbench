@@ -137,7 +137,7 @@ function defaultTrainingConfig(context) {
   return workbenchDefaults.workflowDefaults('training',{
     application: 'fragment-tree-training', architectureMode:'shared', sharedArchitecture:{...require('./workbench/shared-architecture').defaults}, modelConfig, datasetDir: '',
     outputDir: '',
-    experimentName: 'exp_main', epochs: 1, batchSize: 4, device: 'cuda', maxSamples:128, seed:42, warmupSteps:100, trainLogIntervalSteps:100, checkpointIntervalEpochs:0, validationIntervalSteps:0, validationFraction:0.1, lrPatience:3, earlyStoppingPatience:10, minLr:0.000001, branchWeight:1, negativeWeight:0.5,    intensityLossWeight:1, cosineLossWeight:1, intensityExponent:0.5,   gradientClip:1, lr: 0.0001, dropout: 0.5, resume: '', minimumAssignmentScore:0, minimumAssignmentScoreWithoutPrecursor:0, cacheDatasetInMemory:false, validateBeforeTraining:false,
+    epochs: 1, batchSize: 4, device: 'cuda', maxSamples:128, seed:42, warmupSteps:100, trainLogIntervalSteps:100, checkpointIntervalEpochs:0, validationIntervalSteps:0, validationFraction:0.1, lrPatience:3, earlyStoppingPatience:10, minLr:0.000001, branchWeight:1, negativeWeight:0.5,    intensityLossWeight:1, cosineLossWeight:1, intensityExponent:0.5,   gradientClip:1, lr: 0.0001, dropout: 0.5, resume: '', minimumAssignmentScore:0, minimumAssignmentScoreWithoutPrecursor:0, cacheDatasetInMemory:false, validateBeforeTraining:false,
   },root);
 }
 
@@ -889,7 +889,7 @@ const HELP = {
   minimumAssignmentScore: 'Assignment score = sum of intensities of explained peaks / sum of all observed peak intensities. Keep samples with score ≥ this threshold AND score_without_precursor ≥ its threshold. 0 disables this filter. Filtering occurs during training load; prepared data is retained.',
   minimumAssignmentScoreWithoutPrecursor: 'Assignment score without precursor = explained fragment-peak intensity / total fragment-peak intensity, excluding the precursor. Keep samples with this score ≥ the threshold and the all-peak score ≥ its threshold. 0 disables this filter.',
   cacheDatasetInMemory: 'Keep each prepared tensor in RAM after its first training or validation access. Disabled by default; streaming retains only the current source.',
-  experimentName: 'Checkpoint experiment directory name.', ckptId: 'Optional checkpoint identifier to resume.',
+  ckptId: 'Optional checkpoint identifier to resume.',
   batchSize: 'Maximum prepared pieces B per optimizer update. Packing also respects Maximum simultaneous spectra M: pieces ≤ B and total spectra ≤ M. Consequently the actual batch may contain fewer than B pieces. Increasing B can reduce the number of updates per epoch.', device: 'PyTorch execution device.',
   epochs: 'Requested complete passes through the training data. On Resume this is the number of ADDITIONAL epochs: final epoch = checkpoint epoch + requested epochs, unless early stopping ends the run earlier.', validationIntervalSteps: 'Run validation after this many optimizer steps; use 0 to disable step validation.',
   stepValidationFraction: 'Fraction of validation compounds (SMILES) used at step intervals: 1 = all, 0.1 = 10%. Uses a fixed subset, rounded up to at least one compound. Epoch-end validation always evaluates all compounds.',

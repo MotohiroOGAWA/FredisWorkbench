@@ -22,7 +22,7 @@ console.log('Workbench HTML, script, CSP and CLI parameter checks passed.');
 
 assert(!html.includes('Initialize weights'));
 assert(!html.includes('Source Anchored Reaction Model (v1)'));
-assert(html.includes('name="experimentName" value="exp_main"'));
+assert(!html.includes('name="experimentName"'));
 assert(html.includes('data-model-mol'));
 const encoderArgs=extension.buildTrainingArgs({modelConfig:{architecture:'test',mol_encoder_params:{node_dim:32}}});
 assert.equal(encoderArgs[3],'fragment-tree-detailed');assert.equal(encoderArgs[encoderArgs.indexOf('--node-dim')+1],'32');
