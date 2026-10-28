@@ -249,9 +249,11 @@ function resolveWorkbenchPanel(context, output, panel, initialPage = "home", ini
         await runFragmentTree(context, output, config, panel, overwriteConfirmed);
       } else if (message.type === 'copyTrainingCommand') {
         const python = vscode.workspace.getConfiguration('fredis').get('pythonPath', 'python');
-        const command = shellDisplay(python, buildTrainingArgs(normalizeTrainingConfig(message.config,trainingConfigPath?path.dirname(trainingConfigPath):projectRoot(context))));
+        const config=normalizeTrainingConfig(message.config,trainingConfigPath?path.dirname(trainingConfigPath):projectRoot(context));
+        const args=await trainingCommandArgs(config);
+        const command = shellDisplay(python,args);
         await vscode.env.clipboard.writeText(command);
-        panel.webview.postMessage({ type: 'trainingStatus', status: 'idle', text: 'Command copied.', command });
+        panel.webview.postMessage({ type: 'trainingStatus', status: 'idle', text: config.tuning?.enabled?'Tuning plan saved: '+args[5]+' · Command copied.':'Command copied.', command });
       } else if (message.type === 'runTraining') {
         await runTraining(context, output, normalizeTrainingConfig(message.config,trainingConfigPath?path.dirname(trainingConfigPath):projectRoot(context)), panel);
       } else if (message.type === 'stop') {
@@ -533,6 +535,33 @@ function buildTrainingArgs(c) {
   if(c.overwrite)a.push('--overwrite');
   if (c.resume) a.push('--resume', c.resume);
   return a;
+}
+
+// A copied search command references its plan instead of repeating every trial.
+async function trainingCommandArgs(config) {
+  const args=buildTrainingArgs(config);
+  if(!config.tuning?.enabled)return args;
+  const plan={...JSON.parse(args[args.indexOf('--plan-json')+1]),schema:'fredis.tuning-plan',schemaVersion:1};
+  const file=path.join(config.outputDir,'fragment-tree.tuning-plan.pft');
+  const executed=['result.tuning.pft','fragment-tree.tuning-result.pft','fragment-tree.tuning.pft','tuning-scores.tsv'].some(name=>fs.existsSync(path.join(config.outputDir,name)));
+  // Keep the executed plan intact if the form now describes a different search.
+  // The backend checks the same identity before resuming any trial.
+  if(executed){
+    const existing=path.join(config.outputDir,'fragment-tree.tuning-plan.pft');
+    const legacy=path.join(config.outputDir,'tuning-plan.json');
+    const saved=fs.existsSync(existing)?existing:fs.existsSync(legacy)?legacy:null;
+    if(!saved)throw new Error('The existing search has no saved plan. Choose a new output directory.');
+    const original=JSON.parse(await fs.promises.readFile(saved,'utf8'));
+    if(JSON.stringify(original.trials?.map(t=>t.args))!==JSON.stringify(plan.trials.map(t=>t.args)))throw new Error('The settings differ from the executed tuning plan. Choose a new output directory for a new search.');
+  }
+  const text=JSON.stringify(plan,null,2)+'\n';
+  if(!fs.existsSync(file)||await fs.promises.readFile(file,'utf8')!==text){
+    await fs.promises.mkdir(path.dirname(file),{recursive:true});
+    const temporary=file+'.copy-'+require('crypto').randomUUID()+'.tmp';
+    try{await fs.promises.writeFile(temporary,text);await fs.promises.rename(temporary,file);}
+    finally{await fs.promises.rm(temporary,{force:true});}
+  }
+  return ['-m','fredis.cli','train','tune-fragment-tree','--plan',file];
 }
 
 function shellDisplay(program, args) { return [program, ...args].map(v => /^[A-Za-z0-9_./:=,-]+$/.test(v) ? v : `'${v.replace(/'/g, "'\\''")}'`).join(' '); }
@@ -1003,4 +1032,4 @@ function trainingCss() { return `.model-map{background:color-mix(in srgb,var(--v
 
 
 function deactivate() {}
-module.exports = { TrainingConfigEditorProvider, TrainingDataConfigEditorProvider, ResultEditorProvider, activate, deactivate, buildArgs, normalizeConfig, buildTrainingArgs, normalizeTrainingConfig, resultHtml, workbenchHtml, ensureFileSuffix, reactionPatternSetSavePath, summarizeStructureManifests };
+module.exports = { trainingCommandArgs, TrainingConfigEditorProvider, TrainingDataConfigEditorProvider, ResultEditorProvider, activate, deactivate, buildArgs, normalizeConfig, buildTrainingArgs, normalizeTrainingConfig, resultHtml, workbenchHtml, ensureFileSuffix, reactionPatternSetSavePath, summarizeStructureManifests };

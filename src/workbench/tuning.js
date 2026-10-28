@@ -50,12 +50,18 @@ function client(){
  const active=()=>state.enabled&&form.querySelector('[name=trainingMode]:checked')?.value!=='resume';
  function refresh(){
   toggle.setAttribute('aria-pressed',String(!!state.enabled));panel.hidden=!state.enabled;form.classList.toggle('tuning-active',active());
-  const config=getTrainingConfig(),architecture=config.patternArchitecture,frozen=new Set((architecture?.frozenPatternIds||[]).map(String)),known=new Set(Object.keys(config.modelConfig?.reaction_model_params?.pattern_model_params||{}));
+  const config=getTrainingConfig();
+  const copy=document.getElementById('trainingCopyCommand'),hint=document.getElementById('trainingCopyPlanHint');
+  copy.textContent=state.enabled?'Save Tuning Plan & Copy Command':'Copy Command';
+  copy.title=state.enabled?'Save the current tuning plan in Output Directory, then copy its run command.':'Copy the training command.';
+  hint.hidden=!state.enabled;
+  hint.textContent=state.enabled?'Saves fragment-tree.tuning-plan.pft in the current Output Directory: '+(config.outputDir||'(choose an Output Directory)'):'';
+  const architecture=config.patternArchitecture,frozen=new Set((architecture?.frozenPatternIds||[]).map(String)),known=new Set(Object.keys(config.modelConfig?.reaction_model_params?.pattern_model_params||{}));
   for(const key of Object.keys(state.parameters)){
    const pattern=key.match(/^modelConfig\.reaction_model_params\.pattern_model_params\.(\d+)\./);
    const common=config.architectureMode==='shared';
    if(key.startsWith('sharedArchitecture.')&&!common||common&&(key.startsWith('patternArchitecture.')||key.startsWith('modelConfig.')&&!/^modelConfig\.spectrum_model_params\.(ce_center|ce_scale)$/.test(key)))delete state.parameters[key];
-   if(pattern&&(!known.has(pattern[1])||frozen.has(pattern[1])||architecture?.mode==='shared')||key.startsWith('patternArchitecture.shared.')&&(architecture?.mode!=='shared'||!form.querySelector('[data-shared-pattern-parameter]')))delete state.parameters[key];
+   if(pattern&&(!known.has(pattern[1])||frozen.has(pattern[1])||architecture?.mode==='shared')||key.startsWith('patternArchitecture.shared.')&&architecture?.mode!=='shared')delete state.parameters[key];
   }
   for(const input of form.querySelectorAll('[data-shared-architecture-parameter],[data-shared-pattern-parameter],[data-pattern-parameter],#trainingParameterEditor input[type=number],input[name=lr],input[name=batchSize],input[name=dropout],input[name=weightDecay]')){
    if(input.closest('.tuning-control'))continue;

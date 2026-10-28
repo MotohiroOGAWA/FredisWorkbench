@@ -2,8 +2,8 @@ const assert=require('assert/strict'),fs=require('fs'),os=require('os'),path=req
 const root=require('./paths').applicationRoot,temporary=fs.mkdtempSync(path.join(os.tmpdir(),'fredis-training-config-'));
 const source=path.join(temporary,'fragment-tree.tuning-plan.pft'),savedFile=path.join(temporary,'saved.tuning-plan.pft');
 const fixture=require('./fixtures'),originalLoad=Module._load;
-const saveDialogs=[];
-const vscode={workspace:{workspaceFolders:[{uri:{fsPath:root}}],getConfiguration:()=>({get:(key,fallback)=>fallback})},Uri:{file:fsPath=>({fsPath})},window:{showSaveDialog:async options=>{saveDialogs.push(options);return {fsPath:path.join(temporary,'saved')};}}};
+const saveDialogs=[],copiedCommands=[];
+const vscode={env:{clipboard:{writeText:async text=>copiedCommands.push(text)}},workspace:{workspaceFolders:[{uri:{fsPath:root}}],getConfiguration:()=>({get:(key,fallback)=>fallback})},Uri:{file:fsPath=>({fsPath})},window:{showSaveDialog:async options=>{saveDialogs.push(options);return {fsPath:path.join(temporary,'saved')};}}};
 Module._load=function(name,...args){return name==='vscode'?vscode:originalLoad.call(this,name,...args);};
 const ext=require('../src/extension');
 for(const name of ['./workbench/project','./features/smarts-search/editor','./features/spectrum-prediction/editor','./workbench/parameter-service','./workbench/services','./workbench/defaults','./workbench/dataset-upload','./webview-path-drop','./features/reaction-pattern-analysis/editor'])require(path.join(__dirname,'../src',name)).attach=()=>{};
@@ -43,6 +43,12 @@ require('../src/features/spectrum-viewer/extension').createEmbeddedProvider=()=>
   assert.equal(messages.filter(m=>m.type==='configuration/save'&&m.kind==='training').at(-1).config.epochs,23);
   d.getElementById('saveTraining').click();
   assert(messages.some(m=>m.type==='configuration/saveAs'&&m.kind==='training'));
+  await handlers.at(-1)({type:'copyTrainingCommand',config:snapshot()});
+  const expectedPlan=path.join(snapshot().outputDir,'fragment-tree.tuning-plan.pft');
+  assert.equal(copiedCommands.at(-1),'python -m fredis.cli train tune-fragment-tree --plan '+expectedPlan);
+  assert(fs.existsSync(expectedPlan));
+  assert.equal(JSON.parse(fs.readFileSync(expectedPlan)).outputDir,snapshot().outputDir);
+  assert(!copiedCommands.at(-1).includes('--plan-json'));
   await new Promise(resolve=>setTimeout(resolve,50));assert.deepEqual(errors,[]);
   console.log('Training configuration file association, Training-page navigation, relative paths, settings restoration, startup isolation and .pft saving passed.');
  }finally{dom?.window.close();fs.rmSync(temporary,{recursive:true,force:true});Module._load=originalLoad;}

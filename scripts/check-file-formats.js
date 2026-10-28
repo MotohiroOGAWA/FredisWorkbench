@@ -21,6 +21,8 @@ async function main() {
   assert.equal(formats.match('/tmp/result.training.pft').id,'training-report');
   assert.equal(formats.match('/tmp/fragment-tree.training-config.pft').id,'training-config');
   assert.equal(formats.match('/tmp/result.reactionpatternanalysis.pft').id,'reaction-analysis-result');
+  assert.equal(formats.match('/tmp/result.tuning.pft').id,'tuning');
+  assert.equal(formats.match('/tmp/fragment-tree.tuning.pft').id,'tuning');
   const generated = formats.contributions();
   const manifest = require('../package.json');
   assert(!manifest.contributes.commands.some(item=>/Evaluation$/.test(item.command)));
